@@ -1,0 +1,43 @@
+version: "3"
+services:
+  api:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: go_api
+    volumes:
+      - ./api:/api
+    working_dir: /api
+    ports:
+      - 1323:1323 # 開放するポート
+    depends_on: # dbコンテナに接続する ビルドするのもdbコンテナが立ち上がってからになる
+      - db
+    command: realize start --run --no-config
+  db:
+    image: mysql:5.7 # mysql のdockerイメージを取ってくる
+    container_name: go_db
+    volumes:
+      - ./mysql_data:/var/lib/mysql # データ永続化のためのボリューム
+      - ./sqls/init:/docker-entrypoint-initdb.d
+    ports:
+      - 3306:3306 # 開放するポート
+    environment:
+      MYSQL_ROOT_PASSWORD: docker_pwd # sqlのrootユーザーでログインする時のパスワード
+      MYSQL_DATABASE: docker_db # sqlで初回起動時に作成されるデータベース名
+      MYSQL_USER: docker_user # sqlで初回起動時に作成されるユーザー名
+      MYSQL_PASSWORD: docker_user_pwd # sqlで初回起動時に作成されるユーザーのパスワード
+  front:
+    build:
+      context: .
+      dockerfile: Dockerfile-front
+    volumes:
+      - ./front:/front
+    working_dir: /front
+    command: npm start # npm がインストールされている前提 npm start / インストール前なら node としておく
+    tty: true
+    ports:
+      - 3000:3000
+    depends_on:
+      - api
+volumes:
+  mysql_data: # ローカルのディレクトリにデータを保存
